@@ -87,11 +87,12 @@ function createViewMenu(): Menu {
 
 class ContentWidget extends Widget {
     static menuFocus: ContentWidget | null;
-    static currentWidget: ContentWidget | null = null; // Added to track current widget
+    static currentWidget: ContentWidget | null = null;
 
     private editor: monaco.editor.IStandaloneCodeEditor | null = null;
     private initialContent: string;
     private fileHandle: FileSystemFileHandle | null = null;
+    private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
 
     constructor(name: string, initialContent: string = '', fileHandle: FileSystemFileHandle | null = null) {
         super();
@@ -109,21 +110,23 @@ class ContentWidget extends Widget {
         this.initialContent = initialContent;
         this.fileHandle = fileHandle;
 
-        let widget = this;
-        this.node.addEventListener('contextmenu', (event: MouseEvent) => {
-            ContentWidget.menuFocus = widget;
-        });
-
         this.node.style.width = '100%';
         this.node.style.height = '100%';
+
+        this.contextMenuHandler = (event: MouseEvent) => {
+            ContentWidget.menuFocus = this;
+        };
+        this.node.addEventListener('contextmenu', this.contextMenuHandler);
     }
 
     protected onAfterAttach(msg: Message): void {
         super.onAfterAttach(msg);
+        const uri = monaco.Uri.parse('file:///' + this.title.label);
+        const model = monaco.editor.createModel(this.initialContent, undefined, uri);
         this.editor = monaco.editor.create(this.node, {
-            value: this.initialContent,
-            language: 'javascript',
+            model: model,
             automaticLayout: true,
+            // theme: "vs-dark"
         });
     }
 
@@ -138,23 +141,29 @@ class ContentWidget extends Widget {
         if (this.editor) {
             this.editor.focus();
         }
-        // Update the currentWidget when activated
         ContentWidget.currentWidget = this;
     }
 
     protected onBeforeDetach(msg: Message): void {
-        if (ContentWidget.menuFocus === this) {
-            ContentWidget.menuFocus = null;
-        }
-        if (this.editor) {
-            this.editor.dispose();
-            this.editor = null;
-        }
         super.onBeforeDetach(msg);
     }
 
     dispose(): void {
+        if (ContentWidget.menuFocus === this) {
+            ContentWidget.menuFocus = null;
+        }
+        if (ContentWidget.currentWidget === this) {
+            ContentWidget.currentWidget = null;
+        }
+        if (this.contextMenuHandler) {
+            this.node.removeEventListener('contextmenu', this.contextMenuHandler);
+            this.contextMenuHandler = null;
+        }
         if (this.editor) {
+            const model = this.editor.getModel();
+            if (model) {
+                model.dispose();
+            }
             this.editor.dispose();
             this.editor = null;
         }
@@ -175,7 +184,6 @@ class ContentWidget extends Widget {
         this.title.caption = `Editing: ${handle.name}`;
     }
 
-    // Getter for the editor
     getEditor(): monaco.editor.IStandaloneCodeEditor | null {
         return this.editor;
     }
@@ -186,16 +194,15 @@ interface DirectoryNode {
     kind: 'file' | 'directory';
     handle: FileSystemDirectoryHandle | FileSystemFileHandle;
     children?: Map<string, DirectoryNode>;
+    loaded?: boolean;
 }
 
 class DirectoryViewerWidget extends Widget {
     private container: HTMLElement;
-    private rootUl!: HTMLUListElement;
     private directoryHandle: FileSystemDirectoryHandle | null;
     private directoryTree: DirectoryNode | null = null;
     private expandedPaths: Set<string> = new Set();
-    private monitorInterval: number | null = null;
-
+    private selectedItem: HTMLElement | null = null;
     private _fileOpened = new Signal<this, { path: string; handle: FileSystemFileHandle }>(this);
 
     constructor() {
@@ -224,55 +231,23 @@ class DirectoryViewerWidget extends Widget {
     async setDirectoryHandle(handle: FileSystemDirectoryHandle) {
         this.directoryHandle = handle;
 
-        if (this.monitorInterval !== null) {
-            clearInterval(this.monitorInterval);
-            this.monitorInterval = null;
-        }
-
-        this.directoryTree = await this.buildDirectoryTree(handle);
-        const rootPath = this.directoryTree.name;
-        this.expandedPaths.add(rootPath);
-
-        this.container.innerHTML = '';
-        this.rootUl = await this.buildDomTree(this.directoryTree);
-        this.container.appendChild(this.rootUl);
-
-        this.monitorInterval = window.setInterval(() => {
-            this.checkForUpdates();
-        }, 5000);
-    }
-
-    async buildDirectoryTree(
-        handle: FileSystemDirectoryHandle | FileSystemFileHandle,
-        path: string = ''
-    ): Promise<DirectoryNode> {
-        const node: DirectoryNode = {
+        this.directoryTree = {
             name: handle.name,
-            kind: handle.kind,
-            handle: handle
+            kind: 'directory',
+            handle: handle,
+            loaded: false,
+            children: new Map<string, DirectoryNode>()
         };
-        const currentPath = path ? `${path}/${handle.name}` : handle.name;
-        if (handle.kind === 'directory') {
-            node.children = new Map<string, DirectoryNode>();
-            for await (const [name, childHandle] of (handle as FileSystemDirectoryHandle).entries()) {
-                const childNode = await this.buildDirectoryTree(childHandle, currentPath);
-                node.children.set(name, childNode);
-            }
-        }
-        return node;
+        this.expandedPaths.clear();
+        const rootUl = await this.createDomNode(this.directoryTree);
+        this.container.innerHTML = '';
+        this.container.appendChild(rootUl);
     }
 
-    async buildDomTree(node: DirectoryNode, path: string = ''): Promise<HTMLUListElement> {
+    async createDomNode(node: DirectoryNode, path: string = ''): Promise<HTMLUListElement> {
         const ul = document.createElement('ul');
         ul.className = 'directory-tree';
 
-        const li = await this.createDomNode(node, path);
-        ul.appendChild(li);
-
-        return ul;
-    }
-
-    async createDomNode(node: DirectoryNode, path: string = ''): Promise<HTMLLIElement> {
         const li = document.createElement('li');
         li.className = 'directory-item';
         const currentPath = path ? `${path}/${node.name}` : node.name;
@@ -287,18 +262,15 @@ class DirectoryViewerWidget extends Widget {
         li.appendChild(icon);
         li.appendChild(nameSpan);
 
+        ul.appendChild(li);
+
         if (node.kind === 'directory') {
-            const ul = document.createElement('ul');
-            ul.className = 'nested';
+            const childUl = document.createElement('ul');
+            childUl.className = 'nested';
 
             if (this.expandedPaths.has(currentPath)) {
                 li.classList.add('expanded');
                 icon.classList.add('fa', 'fa-folder-open');
-
-                for (const [name, childNode] of node.children!) {
-                    const childLi = await this.createDomNode(childNode, currentPath);
-                    ul.appendChild(childLi);
-                }
             } else {
                 li.classList.add('collapsed');
                 icon.classList.add('fa', 'fa-folder');
@@ -313,10 +285,20 @@ class DirectoryViewerWidget extends Widget {
                     icon.classList.add('fa-folder-open');
                     this.expandedPaths.add(currentPath);
 
-                    if (!ul.hasChildNodes()) {
-                        for (const [name, childNode] of node.children!) {
+                    if (!node.loaded) {
+                        node.loaded = true;
+                        node.children = new Map<string, DirectoryNode>();
+                        for await (const [name, childHandle] of (node.handle as FileSystemDirectoryHandle).entries()) {
+                            const childNode: DirectoryNode = {
+                                name: childHandle.name,
+                                kind: childHandle.kind,
+                                handle: childHandle,
+                                loaded: false
+                            };
+                            node.children.set(name, childNode);
+
                             const childLi = await this.createDomNode(childNode, currentPath);
-                            ul.appendChild(childLi);
+                            childUl.appendChild(childLi);
                         }
                     }
                 } else {
@@ -328,98 +310,24 @@ class DirectoryViewerWidget extends Widget {
                 }
             });
 
-            li.appendChild(ul);
+            li.appendChild(childUl);
         } else {
             icon.classList.add('fa', 'fa-file');
             li.addEventListener('click', (event) => {
+                event.stopPropagation();
+                if (this.selectedItem) {
+                    this.selectedItem.classList.remove('file-selected');
+                }
+                li.classList.add('file-selected');
+                this.selectedItem = li;
+            });
+            li.addEventListener('dblclick', (event) => {
                 event.stopPropagation();
                 this._fileOpened.emit({ path: currentPath, handle: node.handle as FileSystemFileHandle });
             });
         }
 
-        return li;
-    }
-
-    async checkForUpdates() {
-        if (!this.directoryHandle || !this.directoryTree || !this.rootUl) {
-            return;
-        }
-
-        const newDirectoryTree = await this.buildDirectoryTree(this.directoryHandle);
-        await this.updateDomTree(this.directoryTree, newDirectoryTree, this.rootUl.firstElementChild as HTMLElement);
-        this.directoryTree = newDirectoryTree;
-    }
-
-    async updateDomTree(
-        oldNode: DirectoryNode,
-        newNode: DirectoryNode,
-        domElement: HTMLElement,
-        path: string = ''
-    ) {
-        const currentPath = path ? `${path}/${oldNode.name}` : oldNode.name;
-
-        if (oldNode.kind !== newNode.kind || oldNode.name !== newNode.name) {
-            const parentElement = domElement.parentElement;
-            const newDomElement = await this.createDomNode(newNode, path);
-            parentElement?.replaceChild(newDomElement, domElement);
-        } else if (newNode.kind === 'directory') {
-            if (this.expandedPaths.has(currentPath)) {
-                domElement.classList.add('expanded');
-                domElement.classList.remove('collapsed');
-            } else {
-                domElement.classList.add('collapsed');
-                domElement.classList.remove('expanded');
-            }
-
-            const domUl = domElement.querySelector('ul');
-            if (!domUl) {
-                return;
-            }
-
-            const oldChildren = oldNode.children!;
-            const newChildren = newNode.children!;
-
-            const oldNames = new Set(oldChildren.keys());
-            const newNames = new Set(newChildren.keys());
-
-            for (const name of oldNames) {
-                if (!newNames.has(name)) {
-                    const childDomElement = domUl.querySelector(`[data-path="${currentPath}/${name}"]`);
-                    if (childDomElement) {
-                        domUl.removeChild(childDomElement);
-                    }
-                }
-            }
-
-            for (const name of newNames) {
-                if (!oldNames.has(name)) {
-                    const newChildNode = newChildren.get(name)!;
-                    const newChildDomElement = await this.createDomNode(newChildNode, currentPath);
-                    domUl.appendChild(newChildDomElement);
-                }
-            }
-
-            for (const name of newNames) {
-                if (oldNames.has(name)) {
-                    const oldChildNode = oldChildren.get(name)!;
-                    const newChildNode = newChildren.get(name)!;
-                    const childDomElement = domUl.querySelector(
-                        `[data-path="${currentPath}/${name}"]`
-                    ) as HTMLElement;
-                    if (childDomElement) {
-                        await this.updateDomTree(oldChildNode, newChildNode, childDomElement, currentPath);
-                    }
-                }
-            }
-        }
-    }
-
-    dispose(): void {
-        if (this.monitorInterval !== null) {
-            clearInterval(this.monitorInterval);
-            this.monitorInterval = null;
-        }
-        super.dispose();
+        return ul;
     }
 }
 
@@ -439,7 +347,7 @@ function main(): void {
         label: 'New File',
         mnemonic: 0,
         execute: () => {
-            let name = 'untitled.js';
+            let name = 'untitled.txt';
             let content = '';
             let contentWidget = new ContentWidget(name, content);
             dock.addWidget(contentWidget);
@@ -523,7 +431,6 @@ function main(): void {
         }
     });
 
-    // Edit Commands
     commands.addCommand('edit:undo', {
         label: 'Undo',
         mnemonic: 0,
@@ -593,7 +500,6 @@ function main(): void {
         }
     });
 
-    // View Commands
     commands.addCommand('view:toggle-directory-viewer', {
         label: 'Toggle Directory Viewer',
         mnemonic: 7,
@@ -630,7 +536,6 @@ function main(): void {
         }
     });
 
-    // Key Bindings
     commands.addKeyBinding({
         keys: ['Accel X'],
         selector: 'body',
@@ -667,14 +572,14 @@ function main(): void {
         command: 'edit:redo'
     });
 
-    // Context Menu
     let contextMenu = new ContextMenu({ commands });
-    document.addEventListener('contextmenu', (event: MouseEvent) => {
+    const contextMenuHandler = (event: MouseEvent) => {
         if (event.shiftKey) return;
         if (contextMenu.open(event)) {
             event.preventDefault();
         }
-    });
+    };
+    document.addEventListener('contextmenu', contextMenuHandler);
 
     contextMenu.addItem({ command: 'edit:undo', selector: '.content' });
     contextMenu.addItem({ command: 'edit:redo', selector: '.content' });
@@ -687,10 +592,10 @@ function main(): void {
     contextMenu.addItem({ command: 'file:save-as', selector: '.content' });
     contextMenu.addItem({ command: 'file:close', selector: '.content' });
 
-    // Event Listeners
-    document.addEventListener('keydown', (event: KeyboardEvent) => {
+    const keydownHandler = (event: KeyboardEvent) => {
         commands.processKeydownEvent(event);
-    });
+    };
+    document.addEventListener('keydown', keydownHandler);
 
     const homeContent = `Welcome to the Application!
 This is the landing page. Use the directory viewer to open files.`;
@@ -701,7 +606,7 @@ This is the landing page. Use the directory viewer to open files.`;
     dock.id = 'dock';
 
     dock.addRequested.connect((sender: DockPanel, arg: TabBar<Widget>) => {
-        let name = 'untitled.js';
+        let name = 'untitled.txt';
         let content = '';
         let w = new ContentWidget(name, content);
         sender.addWidget(w, { ref: arg.titles[0].owner });
@@ -710,7 +615,7 @@ This is the landing page. Use the directory viewer to open files.`;
     let doSplit = (mode: DockPanel.InsertMode) => {
         let ref = ContentWidget.menuFocus;
         if (ref) {
-            let name = 'untitled.js';
+            let name = 'untitled.txt';
             let content = '';
             let widget = new ContentWidget(name, content);
             dock.addWidget(widget, { mode: mode, ref: ref });
@@ -796,7 +701,6 @@ This is the landing page. Use the directory viewer to open files.`;
         rank: 0
     });
 
-
     BoxPanel.setStretch(dock, 1);
 
     let leftPanel = new BoxPanel({ direction: 'top-to-bottom', spacing: 0 });
@@ -824,10 +728,12 @@ This is the landing page. Use the directory viewer to open files.`;
     BoxPanel.setStretch(centralPanel, 1);
     BoxPanel.setStretch(statusBar, 0);
 
-    window.onresize = () => {
+    const resizeHandler = () => {
         MessageLoop.postMessage(menuBar, new Widget.ResizeMessage(-1, -1));
         main.update();
     };
+
+    window.addEventListener('resize', resizeHandler);
 
     Widget.attach(menuBar, document.body);
     Widget.attach(main, document.body);
@@ -842,6 +748,12 @@ This is the landing page. Use the directory viewer to open files.`;
         } catch (error) {
             console.error('Error opening file:', error);
         }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        document.removeEventListener('contextmenu', contextMenuHandler);
+        document.removeEventListener('keydown', keydownHandler);
+        window.removeEventListener('resize', resizeHandler);
     });
 }
 
