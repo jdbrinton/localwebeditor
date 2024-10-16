@@ -121,7 +121,6 @@ body {
     display: none;
 }
 
-/* Added to highlight the selected file */
 .file-selected {
     background-color: #bde4ff;
 }
@@ -171,6 +170,12 @@ body {
     left: 0;
 }
 
+/* Italicize preview tabs */
+.lm-TabBar-tab.preview-tab .lm-TabBar-tabLabel {
+    font-style: italic;
+}
+
+/* Adjust tab appearance */
 .lm-TabBar-tab {
     display: flex;
     align-items: center;

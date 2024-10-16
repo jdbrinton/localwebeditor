@@ -39,7 +39,15 @@ module.exports = {
             favicon: './src/assets/favicon.ico',
         }),
         new MonacoEditorWebpackPlugin({
-            languages: ['javascript', 'typescript', 'python', 'css', 'html'],
+            languages: [
+                'abap', 'apex', 'azcli', 'bat', 'bicep', 'c', 'cameligo', 'clojure', 'coffee', 'cpp', 'csharp', 'csp', 'css', 
+                'cypher', 'dart', 'dockerfile', 'ecl', 'elixir', 'flow', 'fsharp', 'go', 'graphql', 'handlebars', 'hcl', 'html', 
+                'ini', 'java', 'javascript', 'julia', 'kotlin', 'less', 'lexon', 'lua', 'm3', 'markdown', 'mips', 'msdax', 
+                'mysql', 'objective-c', 'pascal', 'perl', 'pgsql', 'php', 'pla', 'plaintext', 'postiats', 'powerquery', 
+                'powershell', 'pug', 'python', 'r', 'razor', 'redis', 'redshift', 'restructuredtext', 'ruby', 'rust', 'sb', 
+                'scheme', 'scss', 'shell', 'solidity', 'sophia', 'sparql', 'sql', 'st', 'swift', 'systemverilog', 'tcl', 'twig', 
+                'typescript', 'vb', 'xml', 'yaml'
+            ]
         }),
     ],
     devServer: {

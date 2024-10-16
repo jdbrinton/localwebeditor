@@ -9,7 +9,8 @@ import {
     Menu,
     MenuBar,
     TabBar,
-    Widget
+    Widget,
+    DockLayout
 } from '@lumino/widgets';
 
 import * as monaco from 'monaco-editor';
@@ -88,19 +89,18 @@ function createViewMenu(): Menu {
 class ContentWidget extends Widget {
     static menuFocus: ContentWidget | null;
     static currentWidget: ContentWidget | null = null;
+    static previewWidget: ContentWidget | null = null;
 
     private editor: monaco.editor.IStandaloneCodeEditor | null = null;
     private initialContent: string;
     private fileHandle: FileSystemFileHandle | null = null;
     private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
+    private isPreview: boolean = false;
 
-    constructor(name: string, initialContent: string = '', fileHandle: FileSystemFileHandle | null = null) {
+    constructor(name: string, initialContent: string = '', fileHandle: FileSystemFileHandle | null = null, isPreview: boolean = false) {
         super();
         this.setFlag(Widget.Flag.DisallowLayout);
         this.addClass('content');
-
-        const safeName = name.toLowerCase().replace(/[^a-z0-9\-_]/g, '-');
-        this.addClass(safeName);
 
         this.title.label = name;
         this.title.closable = true;
@@ -109,6 +109,7 @@ class ContentWidget extends Widget {
 
         this.initialContent = initialContent;
         this.fileHandle = fileHandle;
+        this.isPreview = isPreview;
 
         this.node.style.width = '100%';
         this.node.style.height = '100%';
@@ -117,17 +118,33 @@ class ContentWidget extends Widget {
             ContentWidget.menuFocus = this;
         };
         this.node.addEventListener('contextmenu', this.contextMenuHandler);
+
+        if (this.isPreview) {
+            this.title.className += ' preview-tab';
+        }
     }
 
     protected onAfterAttach(msg: Message): void {
         super.onAfterAttach(msg);
-        const uri = monaco.Uri.parse('file:///' + this.title.label);
-        const model = monaco.editor.createModel(this.initialContent, undefined, uri);
+        let model: monaco.editor.ITextModel | null = null;
+        const uri = monaco.Uri.parse('file:///' + (this.fileHandle ? this.fileHandle.name : this.title.label));
+
+        if (monaco.editor.getModel(uri)) {
+            model = monaco.editor.getModel(uri)!;
+        } else {
+            model = monaco.editor.createModel(this.initialContent, undefined, uri);
+        }
+
         this.editor = monaco.editor.create(this.node, {
             model: model,
             automaticLayout: true,
-            // theme: "vs-dark"
         });
+
+        if (this.isPreview && this.editor) {
+            this.editor.onDidChangeModelContent(() => {
+                this.convertToPermanent();
+            });
+        }
     }
 
     protected onResize(msg: Widget.ResizeMessage): void {
@@ -155,13 +172,16 @@ class ContentWidget extends Widget {
         if (ContentWidget.currentWidget === this) {
             ContentWidget.currentWidget = null;
         }
+        if (ContentWidget.previewWidget === this) {
+            ContentWidget.previewWidget = null;
+        }
         if (this.contextMenuHandler) {
             this.node.removeEventListener('contextmenu', this.contextMenuHandler);
             this.contextMenuHandler = null;
         }
         if (this.editor) {
             const model = this.editor.getModel();
-            if (model) {
+            if (model && model.isDisposed() === false) {
                 model.dispose();
             }
             this.editor.dispose();
@@ -187,6 +207,20 @@ class ContentWidget extends Widget {
     getEditor(): monaco.editor.IStandaloneCodeEditor | null {
         return this.editor;
     }
+
+    isPreviewMode(): boolean {
+        return this.isPreview;
+    }
+
+    convertToPermanent(): void {
+        if (this.isPreview) {
+            this.isPreview = false;
+            this.title.className = this.title.className.replace(' preview-tab', '');
+            if (ContentWidget.previewWidget === this) {
+                ContentWidget.previewWidget = null;
+            }
+        }
+    }
 }
 
 interface DirectoryNode {
@@ -203,7 +237,7 @@ class DirectoryViewerWidget extends Widget {
     private directoryTree: DirectoryNode | null = null;
     private expandedPaths: Set<string> = new Set();
     private selectedItem: HTMLElement | null = null;
-    private _fileOpened = new Signal<this, { path: string; handle: FileSystemFileHandle }>(this);
+    private _fileOpened = new Signal<this, { path: string; handle: FileSystemFileHandle; preview: boolean }>(this);
 
     constructor() {
         super();
@@ -224,7 +258,7 @@ class DirectoryViewerWidget extends Widget {
         this.container.appendChild(openDirButton);
     }
 
-    get fileOpened(): ISignal<this, { path: string; handle: FileSystemFileHandle }> {
+    get fileOpened(): ISignal<this, { path: string; handle: FileSystemFileHandle; preview: boolean }> {
         return this._fileOpened;
     }
 
@@ -313,6 +347,7 @@ class DirectoryViewerWidget extends Widget {
             li.appendChild(childUl);
         } else {
             icon.classList.add('fa', 'fa-file');
+            let clickTimer: number | null = null;
             li.addEventListener('click', (event) => {
                 event.stopPropagation();
                 if (this.selectedItem) {
@@ -320,10 +355,17 @@ class DirectoryViewerWidget extends Widget {
                 }
                 li.classList.add('file-selected');
                 this.selectedItem = li;
-            });
-            li.addEventListener('dblclick', (event) => {
-                event.stopPropagation();
-                this._fileOpened.emit({ path: currentPath, handle: node.handle as FileSystemFileHandle });
+
+                if (clickTimer !== null) {
+                    clearTimeout(clickTimer);
+                    clickTimer = null;
+                    this._fileOpened.emit({ path: currentPath, handle: node.handle as FileSystemFileHandle, preview: false });
+                } else {
+                    clickTimer = window.setTimeout(() => {
+                        this._fileOpened.emit({ path: currentPath, handle: node.handle as FileSystemFileHandle, preview: true });
+                        clickTimer = null;
+                    }, 250);
+                }
             });
         }
 
@@ -738,17 +780,56 @@ This is the landing page. Use the directory viewer to open files.`;
     Widget.attach(menuBar, document.body);
     Widget.attach(main, document.body);
 
-    directoryViewer.fileOpened.connect(async (sender, { path, handle }) => {
+    directoryViewer.fileOpened.connect(async (sender, { path, handle, preview }) => {
         try {
-            const file = await handle.getFile();
-            const content = await file.text();
-            const contentWidget = new ContentWidget(handle.name, content, handle);
-            dock.addWidget(contentWidget);
-            dock.activateWidget(contentWidget);
+            const uri = monaco.Uri.parse('file:///' + handle.name);
+            let model = monaco.editor.getModel(uri);
+            if (!model) {
+                const file = await handle.getFile();
+                const content = await file.text();
+                model = monaco.editor.createModel(content, undefined, uri);
+            }
+
+            if (preview) {
+                if (ContentWidget.previewWidget) {
+                    if (ContentWidget.previewWidget.getFileHandle() === handle) {
+                        dock.activateWidget(ContentWidget.previewWidget);
+                        return;
+                    }
+                    ContentWidget.previewWidget.close();
+                }
+                let contentWidget = new ContentWidget(handle.name, '', handle, true);
+                ContentWidget.previewWidget = contentWidget;
+                dock.addWidget(contentWidget);
+                dock.activateWidget(contentWidget);
+            } else {
+                let existingWidget = findWidgetByFileHandle(handle);
+                if (existingWidget) {
+                    dock.activateWidget(existingWidget);
+                } else if (ContentWidget.previewWidget && ContentWidget.previewWidget.getFileHandle() === handle) {
+                    ContentWidget.previewWidget.convertToPermanent();
+                    ContentWidget.previewWidget = null;
+                } else {
+                    let contentWidget = new ContentWidget(handle.name, '', handle);
+                    dock.addWidget(contentWidget);
+                    dock.activateWidget(contentWidget);
+                }
+            }
         } catch (error) {
             console.error('Error opening file:', error);
         }
     });
+
+    function findWidgetByFileHandle(handle: FileSystemFileHandle): ContentWidget | null {
+        for (let widget of dock.widgets()) {
+            if (widget instanceof ContentWidget) {
+                if (widget.getFileHandle() === handle && !widget.isPreviewMode()) {
+                    return widget;
+                }
+            }
+        }
+        return null;
+    }
 
     window.addEventListener('beforeunload', () => {
         document.removeEventListener('contextmenu', contextMenuHandler);
