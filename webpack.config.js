@@ -54,6 +54,7 @@ module.exports = {
         new CopyWebpackPlugin({
             patterns: [
                 { from: 'src/assets/CNAME', to: '.' },
+                { from: 'src/assets/.nojekyll', to: '.' },
             ],
         }),
     ],
