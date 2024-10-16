@@ -4,17 +4,13 @@ import { Message, MessageLoop } from '@lumino/messaging';
 import {
     BoxPanel,
     CommandPalette,
-    ContextMenu,
     DockPanel,
     Menu,
     MenuBar,
     TabBar,
     Widget,
-    DockLayout
 } from '@lumino/widgets';
-
 import * as monaco from 'monaco-editor';
-
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import './styles.css';
 
@@ -83,7 +79,65 @@ function createViewMenu(): Menu {
     viewMenu.addItem({ command: 'view:toggle-status-bar' });
     viewMenu.addItem({ command: 'view:toggle-command-palette' });
 
+    let appearanceMenu = new Menu({ commands });
+    appearanceMenu.title.label = 'Appearance';
+
+    appearanceMenu.addItem({ command: 'theme:light' });
+    appearanceMenu.addItem({ command: 'theme:dark' });
+    appearanceMenu.addItem({ command: 'theme:high-contrast' });
+
+    viewMenu.addItem({ type: 'submenu', submenu: appearanceMenu });
+
     return viewMenu;
+}
+
+function createThemeToggleButton(): HTMLElement {
+    let themeButton = document.createElement('button');
+    themeButton.id = 'themeToggleButton';
+    themeButton.className = 'theme-toggle-button';
+
+    let themes = ['light', 'dark', 'high-contrast'];
+    let currentThemeIndex = themes.indexOf(localStorage.getItem('theme') || 'light');
+
+    setButtonIcon(themeButton, themes[currentThemeIndex]);
+
+    themeButton.addEventListener('click', () => {
+        currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+        let theme = themes[currentThemeIndex];
+        applyTheme(theme);
+        setButtonIcon(themeButton, theme);
+    });
+
+    return themeButton;
+}
+
+function setButtonIcon(button: HTMLElement, theme: string): void {
+    button.classList.remove('light-theme-icon', 'dark-theme-icon', 'high-contrast-theme-icon');
+    if (theme === 'light') {
+        button.classList.add('light-theme-icon');
+    } else if (theme === 'dark') {
+        button.classList.add('dark-theme-icon');
+    } else if (theme === 'high-contrast') {
+        button.classList.add('high-contrast-theme-icon');
+    }
+}
+
+function applyTheme(theme: string): void {
+    document.body.dataset.theme = theme;
+
+    let monacoTheme = 'vs';
+
+    if (theme === 'light') {
+        monacoTheme = 'vs';
+    } else if (theme === 'dark') {
+        monacoTheme = 'vs-dark';
+    } else if (theme === 'high-contrast') {
+        monacoTheme = 'hc-black';
+    }
+
+    monaco.editor.setTheme(monacoTheme);
+
+    localStorage.setItem('theme', theme);
 }
 
 class ContentWidget extends Widget {
@@ -97,7 +151,12 @@ class ContentWidget extends Widget {
     private contextMenuHandler: ((event: MouseEvent) => void) | null = null;
     private isPreview: boolean = false;
 
-    constructor(name: string, initialContent: string = '', fileHandle: FileSystemFileHandle | null = null, isPreview: boolean = false) {
+    constructor(
+        name: string,
+        initialContent: string = '',
+        fileHandle: FileSystemFileHandle | null = null,
+        isPreview: boolean = false
+    ) {
         super();
         this.setFlag(Widget.Flag.DisallowLayout);
         this.addClass('content');
@@ -181,7 +240,7 @@ class ContentWidget extends Widget {
         }
         if (this.editor) {
             const model = this.editor.getModel();
-            if (model && model.isDisposed() === false) {
+            if (model && !model.isDisposed()) {
                 model.dispose();
             }
             this.editor.dispose();
@@ -270,7 +329,7 @@ class DirectoryViewerWidget extends Widget {
             kind: 'directory',
             handle: handle,
             loaded: false,
-            children: new Map<string, DirectoryNode>()
+            children: new Map<string, DirectoryNode>(),
         };
         this.expandedPaths.clear();
         const rootUl = await this.createDomNode(this.directoryTree);
@@ -327,7 +386,7 @@ class DirectoryViewerWidget extends Widget {
                                 name: childHandle.name,
                                 kind: childHandle.kind,
                                 handle: childHandle,
-                                loaded: false
+                                loaded: false,
                             };
                             node.children.set(name, childNode);
 
@@ -382,6 +441,9 @@ function main(): void {
     menuBar.addMenu(createViewMenu());
     menuBar.id = 'menuBar';
 
+    let themeToggleButton = createThemeToggleButton();
+    menuBar.node.appendChild(themeToggleButton);
+
     let palette = new CommandPalette({ commands });
     palette.id = 'palette';
 
@@ -394,7 +456,7 @@ function main(): void {
             let contentWidget = new ContentWidget(name, content);
             dock.addWidget(contentWidget);
             dock.activateWidget(contentWidget);
-        }
+        },
     });
 
     commands.addCommand('file:open-directory', {
@@ -412,7 +474,7 @@ function main(): void {
             } catch (err) {
                 console.error(err);
             }
-        }
+        },
     });
 
     commands.addCommand('file:save', {
@@ -435,7 +497,7 @@ function main(): void {
                     await commands.execute('file:save-as');
                 }
             }
-        }
+        },
     });
 
     commands.addCommand('file:save-as', {
@@ -459,7 +521,7 @@ function main(): void {
                     console.error('Error saving file:', error);
                 }
             }
-        }
+        },
     });
 
     commands.addCommand('file:close', {
@@ -470,7 +532,7 @@ function main(): void {
             if (current) {
                 current.close();
             }
-        }
+        },
     });
 
     commands.addCommand('edit:undo', {
@@ -484,7 +546,7 @@ function main(): void {
                     editor.trigger('keyboard', 'undo', null);
                 }
             }
-        }
+        },
     });
 
     commands.addCommand('edit:redo', {
@@ -498,7 +560,7 @@ function main(): void {
                     editor.trigger('keyboard', 'redo', null);
                 }
             }
-        }
+        },
     });
 
     commands.addCommand('edit:cut', {
@@ -507,7 +569,7 @@ function main(): void {
         iconClass: 'fa fa-cut',
         execute: () => {
             document.execCommand('cut');
-        }
+        },
     });
 
     commands.addCommand('edit:copy', {
@@ -516,7 +578,7 @@ function main(): void {
         iconClass: 'fa fa-copy',
         execute: () => {
             document.execCommand('copy');
-        }
+        },
     });
 
     commands.addCommand('edit:paste', {
@@ -525,7 +587,7 @@ function main(): void {
         iconClass: 'fa fa-paste',
         execute: () => {
             document.execCommand('paste');
-        }
+        },
     });
 
     commands.addCommand('edit:select-all', {
@@ -539,7 +601,7 @@ function main(): void {
                     editor.trigger('keyboard', 'selectAll', null);
                 }
             }
-        }
+        },
     });
 
     commands.addCommand('view:toggle-directory-viewer', {
@@ -551,7 +613,7 @@ function main(): void {
             } else {
                 leftPanel.hide();
             }
-        }
+        },
     });
 
     commands.addCommand('view:toggle-status-bar', {
@@ -563,7 +625,7 @@ function main(): void {
             } else {
                 statusBar.hide();
             }
-        }
+        },
     });
 
     commands.addCommand('view:toggle-command-palette', {
@@ -575,64 +637,68 @@ function main(): void {
             } else {
                 palette.hide();
             }
-        }
+        },
+    });
+
+    commands.addCommand('theme:light', {
+        label: 'Light Theme',
+        execute: () => {
+            applyTheme('light');
+            setButtonIcon(themeToggleButton, 'light');
+        },
+    });
+
+    commands.addCommand('theme:dark', {
+        label: 'Dark Theme',
+        execute: () => {
+            applyTheme('dark');
+            setButtonIcon(themeToggleButton, 'dark');
+        },
+    });
+
+    commands.addCommand('theme:high-contrast', {
+        label: 'High-Contrast Dark Theme',
+        execute: () => {
+            applyTheme('high-contrast');
+            setButtonIcon(themeToggleButton, 'high-contrast');
+        },
     });
 
     commands.addKeyBinding({
         keys: ['Accel X'],
         selector: 'body',
-        command: 'edit:cut'
+        command: 'edit:cut',
     });
 
     commands.addKeyBinding({
         keys: ['Accel C'],
         selector: 'body',
-        command: 'edit:copy'
+        command: 'edit:copy',
     });
 
     commands.addKeyBinding({
         keys: ['Accel V'],
         selector: 'body',
-        command: 'edit:paste'
+        command: 'edit:paste',
     });
 
     commands.addKeyBinding({
         keys: ['Accel A'],
         selector: 'body',
-        command: 'edit:select-all'
+        command: 'edit:select-all',
     });
 
     commands.addKeyBinding({
         keys: ['Accel Z'],
         selector: 'body',
-        command: 'edit:undo'
+        command: 'edit:undo',
     });
 
     commands.addKeyBinding({
         keys: ['Accel Shift Z'],
         selector: 'body',
-        command: 'edit:redo'
+        command: 'edit:redo',
     });
-
-    let contextMenu = new ContextMenu({ commands });
-    const contextMenuHandler = (event: MouseEvent) => {
-        if (event.shiftKey) return;
-        if (contextMenu.open(event)) {
-            event.preventDefault();
-        }
-    };
-    document.addEventListener('contextmenu', contextMenuHandler);
-
-    contextMenu.addItem({ command: 'edit:undo', selector: '.content' });
-    contextMenu.addItem({ command: 'edit:redo', selector: '.content' });
-    contextMenu.addItem({ type: 'separator', selector: '.content' });
-    contextMenu.addItem({ command: 'edit:cut', selector: '.content' });
-    contextMenu.addItem({ command: 'edit:copy', selector: '.content' });
-    contextMenu.addItem({ command: 'edit:paste', selector: '.content' });
-    contextMenu.addItem({ type: 'separator', selector: '.content' });
-    contextMenu.addItem({ command: 'file:save', selector: '.content' });
-    contextMenu.addItem({ command: 'file:save-as', selector: '.content' });
-    contextMenu.addItem({ command: 'file:close', selector: '.content' });
 
     const keydownHandler = (event: KeyboardEvent) => {
         commands.processKeydownEvent(event);
@@ -666,22 +732,22 @@ This is the landing page. Use the directory viewer to open files.`;
 
     commands.addCommand('example:split-left', {
         label: 'Split left',
-        execute: () => doSplit('split-left')
+        execute: () => doSplit('split-left'),
     });
 
     commands.addCommand('example:split-right', {
         label: 'Split right',
-        execute: () => doSplit('split-right')
+        execute: () => doSplit('split-right'),
     });
 
     commands.addCommand('example:split-top', {
         label: 'Split top',
-        execute: () => doSplit('split-top')
+        execute: () => doSplit('split-top'),
     });
 
     commands.addCommand('example:split-bottom', {
         label: 'Split bottom',
-        execute: () => doSplit('split-bottom')
+        execute: () => doSplit('split-bottom'),
     });
 
     let savedLayouts: DockPanel.ILayoutConfig[] = [];
@@ -694,9 +760,9 @@ This is the landing page. Use the directory viewer to open files.`;
             palette.addItem({
                 command: 'restore-dock-layout',
                 category: 'Dock Layout',
-                args: { index: savedLayouts.length - 1 }
+                args: { index: savedLayouts.length - 1 },
             });
-        }
+        },
     });
 
     commands.addCommand('restore-dock-layout', {
@@ -705,7 +771,7 @@ This is the landing page. Use the directory viewer to open files.`;
         },
         execute: (args) => {
             dock.restoreLayout(savedLayouts[args.index as number]);
-        }
+        },
     });
 
     commands.addCommand('view:toggle-add-button', {
@@ -714,33 +780,33 @@ This is the landing page. Use the directory viewer to open files.`;
         caption: 'Toggle Add Button',
         execute: () => {
             dock.addButtonEnabled = !dock.addButtonEnabled;
-        }
+        },
     });
 
     palette.addItem({
         command: 'file:new',
         category: 'File',
-        rank: 1
+        rank: 1,
     });
     palette.addItem({
         command: 'file:open-directory',
         category: 'File',
-        rank: 2
+        rank: 2,
     });
     palette.addItem({
         command: 'file:save',
         category: 'File',
-        rank: 3
+        rank: 3,
     });
     palette.addItem({
         command: 'file:save-as',
         category: 'File',
-        rank: 4
+        rank: 4,
     });
     palette.addItem({
         command: 'save-dock-layout',
         category: 'Dock Layout',
-        rank: 0
+        rank: 0,
     });
 
     BoxPanel.setStretch(dock, 1);
@@ -832,10 +898,13 @@ This is the landing page. Use the directory viewer to open files.`;
     }
 
     window.addEventListener('beforeunload', () => {
-        document.removeEventListener('contextmenu', contextMenuHandler);
         document.removeEventListener('keydown', keydownHandler);
         window.removeEventListener('resize', resizeHandler);
     });
+
+    let savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+    setButtonIcon(themeToggleButton, savedTheme);
 }
 
 window.onload = main;
