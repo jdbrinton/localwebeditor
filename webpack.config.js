@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MonacoEditorWebpackPlugin = require('monaco-editor-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
     entry: './src/index.ts',
@@ -48,6 +49,11 @@ module.exports = {
                 'scheme', 'scss', 'shell', 'solidity', 'sophia', 'sparql', 'sql', 'st', 'swift', 'systemverilog', 'tcl', 'twig', 
                 'typescript', 'vb', 'xml', 'yaml'
             ]
+        }),
+        new CopyWebpackPlugin({
+            patterns: [
+                { from: 'src/assets/CNAME', to: '.' },
+            ],
         }),
     ],
     devServer: {

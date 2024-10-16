@@ -54,9 +54,9 @@ body[data-theme="high-contrast"] {
 
 #menuBar {
     flex: 0 0 auto;
-    display: flex;  /* Restored property */
-    justify-content: space-between;  /* Restored property */
-    align-items: center;  /* Restored property */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background-color: var(--background-color);
     border-bottom: 1px solid var(--border-color);
 }
@@ -296,8 +296,6 @@ body[data-theme="high-contrast"] {
     font-family: 'Font Awesome 5 Free';
     font-weight: 900;
 }
-
-/* Override Lumino styles for themes */
 
 body[data-theme="light"] .lm-MenuBar,
 body[data-theme="dark"] .lm-MenuBar,
