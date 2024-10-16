@@ -35,5 +35,8 @@ Thumbs.db
 *.njsproj
 *.sln
 
+# LocalWebEditor is the base project for the Bind egineering suite submodule. Ignoring it from the public repository.
+src/bind
+
 # Miscellaneous
 *.swp

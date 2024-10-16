@@ -11,6 +11,7 @@ import {
     DockPanel,
     Menu,
     MenuBar,
+    SplitPanel,
     TabBar,
     Widget,
 } from '@lumino/widgets';
@@ -264,7 +265,6 @@ class PDFViewerWidget extends Widget {
     }
 }
 
-
 class ContentWidget extends Widget {
     static menuFocus: ContentWidget | null;
     static currentWidget: ContentWidget | null = null;
@@ -309,7 +309,8 @@ class ContentWidget extends Widget {
         if (monaco.editor.getModel(uri)) {
             model = monaco.editor.getModel(uri)!;
         } else {
-            model = monaco.editor.createModel(this.initialContent, undefined, uri);
+            monaco.editor.createModel(this.initialContent, undefined, uri);
+            model = monaco.editor.getModel(uri);
         }
         this.editor = monaco.editor.create(this.node, {
             model: model,
@@ -905,14 +906,13 @@ This is the landing page. Use the directory viewer to open files.`;
         rank: 0,
     });
 
-    BoxPanel.setStretch(dock, 1);
+    BoxPanel.setStretch(palette, 0);
+    BoxPanel.setStretch(directoryViewer, 1);
 
     let leftPanel = new BoxPanel({ direction: 'top-to-bottom', spacing: 0 });
     leftPanel.id = 'leftPanel';
     leftPanel.addWidget(palette);
     leftPanel.addWidget(directoryViewer);
-    BoxPanel.setStretch(palette, 0);
-    BoxPanel.setStretch(directoryViewer, 1);
 
     let statusBar = new Widget();
     statusBar.addClass('status-bar');
@@ -921,11 +921,10 @@ This is the landing page. Use the directory viewer to open files.`;
     let main = new BoxPanel({ direction: 'top-to-bottom', spacing: 0 });
     main.id = 'main';
 
-    let centralPanel = new BoxPanel({ direction: 'left-to-right', spacing: 0 });
+    let centralPanel = new SplitPanel({ orientation: 'horizontal', spacing: 0 });
     centralPanel.addWidget(leftPanel);
     centralPanel.addWidget(dock);
-    BoxPanel.setStretch(leftPanel, 0);
-    BoxPanel.setStretch(dock, 1);
+    centralPanel.setRelativeSizes([0.2, 0.8]);
 
     main.addWidget(centralPanel);
     main.addWidget(statusBar);

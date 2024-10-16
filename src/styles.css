@@ -117,7 +117,7 @@ body[data-theme="high-contrast"] {
     background-color: var(--background-color);
 }
 
-#leftPanel > .lm-CommandPalette {
+#leftPanel>.lm-CommandPalette {
     flex: 0 0 auto;
     min-height: 250px;
     height: 100%;
@@ -126,11 +126,11 @@ body[data-theme="high-contrast"] {
     border: 0px;
 }
 
-#leftPanel > .directory-viewer-widget {
+#leftPanel>.directory-viewer-widget {
     flex: 1 1 auto;
     overflow: auto;
     z-index: 0;
-    border-top: 1px solid var(--border-color); /* Added border to the top */
+    border-top: 1px solid var(--border-color);
 }
 
 #palette {
@@ -158,7 +158,7 @@ body[data-theme="high-contrast"] {
     background: var(--background-color);
 }
 
-.content > div {
+.content>div {
     flex: 1 1 auto;
     border: 1px solid var(--border-color);
     overflow: auto;
@@ -204,7 +204,7 @@ body[data-theme="high-contrast"] {
     margin-right: 5px;
 }
 
-.directory-item.collapsed > ul {
+.directory-item.collapsed>ul {
     display: none;
 }
 
@@ -339,4 +339,46 @@ body[data-theme="dark"] .lm-TabBar-tab:hover,
 body[data-theme="high-contrast"] .lm-TabBar-tab:hover {
     background-color: var(--hover-color);
     color: var(--text-color);
+}
+
+/* Styles for PDFViewerWidget */
+.pdf-viewer-widget {
+    min-width: 50px;
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    background: var(--background-color);
+}
+
+.pdf-viewer-container {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* Ensure container doesn't overflow its parent */
+}
+
+.pdf-viewer-controls {
+    flex: 0 0 auto;
+    padding: 4px;
+    background-color: var(--background-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.pdf-viewer-controls button {
+    margin-right: 4px;
+}
+
+.pdf-canvas-container {
+    flex: 1 1 auto;
+    overflow: auto;
+    /* Enable scrolling when content overflows */
+}
+
+.pdf-canvas-container canvas {
+    display: block;
+    margin: 0 auto;
+    /* Center the canvas horizontally */
 }
