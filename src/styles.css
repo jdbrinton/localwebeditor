@@ -117,16 +117,18 @@ body[data-theme="high-contrast"] {
     background-color: var(--background-color);
 }
 
-#leftPanel>.lm-CommandPalette {
+/* Adjust the CommandPalette styles */
+#leftPanel > .lm-CommandPalette {
+    /* Remove height: 100%; */
     flex: 0 0 auto;
     min-height: 250px;
-    height: 100%;
     overflow: auto;
     z-index: 1;
     border: 0px;
 }
 
-#leftPanel>.directory-viewer-widget {
+/* Ensure the directory-viewer-widget fills the remaining space */
+#leftPanel > .directory-viewer-widget {
     flex: 1 1 auto;
     overflow: auto;
     z-index: 0;
@@ -174,6 +176,15 @@ body[data-theme="high-contrast"] {
     background-color: var(--background-color);
     font: 13px Helvetica, Arial, sans-serif;
     color: var(--text-color);
+}
+
+/* Add the new styles below */
+
+.directory-viewer-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    overflow: auto;
 }
 
 .directory-tree {
