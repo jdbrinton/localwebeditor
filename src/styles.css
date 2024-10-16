@@ -22,6 +22,10 @@ body[data-theme="light"] {
     --primary-color: #007aff;
     --hover-color: #f0f0f0;
     --border-color: #ccc;
+    --menu-active-bg: #007aff;
+    --menu-active-text: #ffffff;
+    --tab-active-bg: #e0e0e0;
+    --tab-active-text: #000000;
 }
 
 body[data-theme="dark"] {
@@ -30,6 +34,10 @@ body[data-theme="dark"] {
     --primary-color: #0a84ff;
     --hover-color: #2a2a2a;
     --border-color: #3c3c3c;
+    --menu-active-bg: #0a84ff;
+    --menu-active-text: #ffffff;
+    --tab-active-bg: #2d2d2d;
+    --tab-active-text: #ffffff;
 }
 
 body[data-theme="high-contrast"] {
@@ -38,15 +46,30 @@ body[data-theme="high-contrast"] {
     --primary-color: #ffff00;
     --hover-color: #1a1a1a;
     --border-color: #ffffff;
+    --menu-active-bg: #ffff00;
+    --menu-active-text: #000000;
+    --tab-active-bg: #ffffff;
+    --tab-active-text: #000000;
 }
 
 #menuBar {
     flex: 0 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    display: flex;  /* Restored property */
+    justify-content: space-between;  /* Restored property */
+    align-items: center;  /* Restored property */
     background-color: var(--background-color);
     border-bottom: 1px solid var(--border-color);
+}
+
+#menuBar .lm-MenuBar-item {
+    color: var(--text-color);
+}
+
+#menuBar .lm-MenuBar-item.lm-mod-active,
+#menuBar .lm-MenuBar-item:active,
+#menuBar .lm-MenuBar-item:hover {
+    background-color: var(--menu-active-bg);
+    color: var(--menu-active-text);
 }
 
 #themeToggleButton {
@@ -246,6 +269,16 @@ body[data-theme="high-contrast"] {
     color: var(--text-color);
 }
 
+.lm-TabBar-tab.lm-mod-current {
+    background-color: var(--tab-active-bg);
+    color: var(--tab-active-text);
+}
+
+.lm-TabBar-tab:hover {
+    background-color: var(--hover-color);
+    color: var(--text-color);
+}
+
 .lm-TabBar-tabIcon {
     display: inline-block;
     vertical-align: middle;
@@ -266,9 +299,44 @@ body[data-theme="high-contrast"] {
 
 /* Override Lumino styles for themes */
 
+body[data-theme="light"] .lm-MenuBar,
 body[data-theme="dark"] .lm-MenuBar,
 body[data-theme="high-contrast"] .lm-MenuBar {
     background-color: var(--background-color);
     color: var(--text-color);
     border-bottom: 1px solid var(--border-color);
+}
+
+body[data-theme="light"] .lm-MenuBar-item,
+body[data-theme="dark"] .lm-MenuBar-item,
+body[data-theme="high-contrast"] .lm-MenuBar-item {
+    color: var(--text-color);
+}
+
+body[data-theme="light"] .lm-MenuBar-item.lm-mod-active,
+body[data-theme="dark"] .lm-MenuBar-item.lm-mod-active,
+body[data-theme="high-contrast"] .lm-MenuBar-item.lm-mod-active {
+    background-color: var(--menu-active-bg);
+    color: var(--menu-active-text);
+}
+
+body[data-theme="light"] .lm-TabBar-tab,
+body[data-theme="dark"] .lm-TabBar-tab,
+body[data-theme="high-contrast"] .lm-TabBar-tab {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+body[data-theme="light"] .lm-TabBar-tab.lm-mod-current,
+body[data-theme="dark"] .lm-TabBar-tab.lm-mod-current,
+body[data-theme="high-contrast"] .lm-TabBar-tab.lm-mod-current {
+    background-color: var(--tab-active-bg);
+    color: var(--tab-active-text);
+}
+
+body[data-theme="light"] .lm-TabBar-tab:hover,
+body[data-theme="dark"] .lm-TabBar-tab:hover,
+body[data-theme="high-contrast"] .lm-TabBar-tab:hover {
+    background-color: var(--hover-color);
+    color: var(--text-color);
 }
