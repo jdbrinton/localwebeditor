@@ -1,6 +1,6 @@
 # LocalWebEditor.com
 
-LocalWebEditor.com is a free web app provided by the Open Source Propulsion Works, a US non-profit organization. This application allows users to edit files directly in their web browser using the File System Access API. No application installation is required. Further, there is no tracking, no ads, and no data collection. There is not even a server. This is a static web app.
+LocalWebEditor.com is a free web app provided by Open Source Propulsion Works, a US non-profit organization. This application allows users to edit files directly in their web browser using the `File System Access API`. No application installation is required. Further, there is no tracking, no ads, and no data collection. There is not even a server. This is a static web app.
 
 ## Introduction
 
@@ -33,6 +33,8 @@ You can use LocalWebEditor.com in two ways:
    npm start
    ```      
 
+4. Navigate to `http://localhost:9000` to access the app.
+
 ### Method 2: run the distribution
 
 1. Clone the repository:
@@ -49,6 +51,8 @@ You can use LocalWebEditor.com in two ways:
    ```  
    http-server docs
    ```
+
+4. Navigate to `http://localhost:8081` to access the app.
 
 ## Favicon Details
 

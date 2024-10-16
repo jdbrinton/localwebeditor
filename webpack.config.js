@@ -12,7 +12,7 @@ module.exports = {
         clean: true,
     },
     resolve: {
-        extensions: ['.ts', '.js'],
+        extensions: ['.ts', '.js', '.mjs'],
     },
     module: {
         rules: [
@@ -33,6 +33,18 @@ module.exports = {
                 test: /\.(png|svg|jpg|jpeg|gif|woff|woff2|eot|ttf|otf)$/i,
                 type: 'asset/resource',
             },
+            {
+                test: /\.mjs$/,
+                include: /node_modules/,
+                type: 'javascript/auto',
+            },
+            {
+                test: /pdf\.worker\.min\.mjs$/,
+                type: 'asset/resource',
+                generator: {
+                    filename: 'pdf.worker.min.js',
+                },
+            },
         ],
     },
     plugins: [
@@ -42,12 +54,12 @@ module.exports = {
         }),
         new MonacoEditorWebpackPlugin({
             languages: [
-                'abap', 'apex', 'azcli', 'bat', 'bicep', 'c', 'cameligo', 'clojure', 'coffee', 'cpp', 'csharp', 'csp', 'css', 
-                'cypher', 'dart', 'dockerfile', 'ecl', 'elixir', 'flow', 'fsharp', 'go', 'graphql', 'handlebars', 'hcl', 'html', 
-                'ini', 'java', 'javascript', 'julia', 'kotlin', 'less', 'lexon', 'lua', 'm3', 'markdown', 'mips', 'msdax', 
-                'mysql', 'objective-c', 'pascal', 'perl', 'pgsql', 'php', 'pla', 'plaintext', 'postiats', 'powerquery', 
-                'powershell', 'pug', 'python', 'r', 'razor', 'redis', 'redshift', 'restructuredtext', 'ruby', 'rust', 'sb', 
-                'scheme', 'scss', 'shell', 'solidity', 'sophia', 'sparql', 'sql', 'st', 'swift', 'systemverilog', 'tcl', 'twig', 
+                'abap', 'apex', 'azcli', 'bat', 'bicep', 'c', 'cameligo', 'clojure', 'coffee', 'cpp', 'csharp', 'csp', 'css',
+                'cypher', 'dart', 'dockerfile', 'ecl', 'elixir', 'flow', 'fsharp', 'go', 'graphql', 'handlebars', 'hcl', 'html',
+                'ini', 'java', 'javascript', 'julia', 'kotlin', 'less', 'lexon', 'lua', 'm3', 'markdown', 'mips', 'msdax',
+                'mysql', 'objective-c', 'pascal', 'perl', 'pgsql', 'php', 'pla', 'plaintext', 'postiats', 'powerquery',
+                'powershell', 'pug', 'python', 'r', 'razor', 'redis', 'redshift', 'restructuredtext', 'ruby', 'rust', 'sb',
+                'scheme', 'scss', 'shell', 'solidity', 'sophia', 'sparql', 'sql', 'st', 'swift', 'systemverilog', 'tcl', 'twig',
                 'typescript', 'vb', 'xml', 'yaml'
             ]
         }),
@@ -55,6 +67,7 @@ module.exports = {
             patterns: [
                 { from: 'src/assets/CNAME', to: '.' },
                 { from: 'src/assets/.nojekyll', to: '.' },
+                { from: 'node_modules/pdfjs-dist/build/pdf.worker.min.mjs', to: 'pdf.worker.min.js' },
             ],
         }),
     ],

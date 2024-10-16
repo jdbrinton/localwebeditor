@@ -1,3 +1,7 @@
+import { getDocument, GlobalWorkerOptions, PDFDocumentProxy } from 'pdfjs-dist';
+
+GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+
 import { CommandRegistry } from '@lumino/commands';
 import { ISignal, Signal } from '@lumino/signaling';
 import { Message, MessageLoop } from '@lumino/messaging';
@@ -45,13 +49,11 @@ function createFileMenu(): Menu {
     let fileMenu = new Menu({ commands });
     fileMenu.title.label = 'File';
     fileMenu.title.mnemonic = 0;
-
     fileMenu.addItem({ command: 'file:new' });
     fileMenu.addItem({ command: 'file:open-directory' });
     fileMenu.addItem({ command: 'file:save' });
     fileMenu.addItem({ command: 'file:save-as' });
     fileMenu.addItem({ command: 'file:close' });
-
     return fileMenu;
 }
 
@@ -59,14 +61,12 @@ function createEditMenu(): Menu {
     let editMenu = new Menu({ commands });
     editMenu.title.label = 'Edit';
     editMenu.title.mnemonic = 0;
-
     editMenu.addItem({ command: 'edit:undo' });
     editMenu.addItem({ command: 'edit:redo' });
     editMenu.addItem({ command: 'edit:cut' });
     editMenu.addItem({ command: 'edit:copy' });
     editMenu.addItem({ command: 'edit:paste' });
     editMenu.addItem({ command: 'edit:select-all' });
-
     return editMenu;
 }
 
@@ -74,20 +74,15 @@ function createViewMenu(): Menu {
     let viewMenu = new Menu({ commands });
     viewMenu.title.label = 'View';
     viewMenu.title.mnemonic = 0;
-
     viewMenu.addItem({ command: 'view:toggle-directory-viewer' });
     viewMenu.addItem({ command: 'view:toggle-status-bar' });
     viewMenu.addItem({ command: 'view:toggle-command-palette' });
-
     let appearanceMenu = new Menu({ commands });
     appearanceMenu.title.label = 'Appearance';
-
     appearanceMenu.addItem({ command: 'theme:light' });
     appearanceMenu.addItem({ command: 'theme:dark' });
     appearanceMenu.addItem({ command: 'theme:high-contrast' });
-
     viewMenu.addItem({ type: 'submenu', submenu: appearanceMenu });
-
     return viewMenu;
 }
 
@@ -95,19 +90,15 @@ function createThemeToggleButton(): HTMLElement {
     let themeButton = document.createElement('button');
     themeButton.id = 'themeToggleButton';
     themeButton.className = 'theme-toggle-button';
-
     let themes = ['light', 'dark', 'high-contrast'];
     let currentThemeIndex = themes.indexOf(localStorage.getItem('theme') || 'light');
-
     setButtonIcon(themeButton, themes[currentThemeIndex]);
-
     themeButton.addEventListener('click', () => {
         currentThemeIndex = (currentThemeIndex + 1) % themes.length;
         let theme = themes[currentThemeIndex];
         applyTheme(theme);
         setButtonIcon(themeButton, theme);
     });
-
     return themeButton;
 }
 
@@ -124,9 +115,7 @@ function setButtonIcon(button: HTMLElement, theme: string): void {
 
 function applyTheme(theme: string): void {
     document.body.dataset.theme = theme;
-
     let monacoTheme = 'vs';
-
     if (theme === 'light') {
         monacoTheme = 'vs';
     } else if (theme === 'dark') {
@@ -134,17 +123,152 @@ function applyTheme(theme: string): void {
     } else if (theme === 'high-contrast') {
         monacoTheme = 'hc-black';
     }
-
     monaco.editor.setTheme(monacoTheme);
-
     localStorage.setItem('theme', theme);
 }
+
+class PDFViewerWidget extends Widget {
+    private fileHandle: FileSystemFileHandle;
+    private pdfDoc: PDFDocumentProxy | null = null;
+    private currentPage: number = 1;
+    private totalPages: number = 0;
+    private scale: number = 1.0;
+    private canvas: HTMLCanvasElement;
+    private pageNumberDisplay: HTMLElement;
+    constructor(fileHandle: FileSystemFileHandle) {
+        super();
+        this.fileHandle = fileHandle;
+        this.setFlag(Widget.Flag.DisallowLayout);
+        this.title.label = fileHandle.name;
+        this.title.closable = true;
+        this.title.caption = `Viewing: ${fileHandle.name}`;
+        this.title.iconClass = 'fa fa-file-pdf-o';
+        this.addClass('pdf-viewer-widget');
+
+        const container = document.createElement('div');
+        container.className = 'pdf-viewer-container';
+        this.node.appendChild(container);
+
+        const controls = document.createElement('div');
+        controls.className = 'pdf-viewer-controls';
+
+        const zoomOutButton = document.createElement('button');
+        zoomOutButton.textContent = '-';
+        zoomOutButton.title = 'Zoom Out';
+        zoomOutButton.addEventListener('click', () => {
+            this.zoomOut();
+        });
+
+        const zoomInButton = document.createElement('button');
+        zoomInButton.textContent = '+';
+        zoomInButton.title = 'Zoom In';
+        zoomInButton.addEventListener('click', () => {
+            this.zoomIn();
+        });
+
+        const prevPageButton = document.createElement('button');
+        prevPageButton.textContent = 'Prev';
+        prevPageButton.title = 'Previous Page';
+        prevPageButton.addEventListener('click', () => {
+            this.goToPreviousPage();
+        });
+
+        const nextPageButton = document.createElement('button');
+        nextPageButton.textContent = 'Next';
+        nextPageButton.title = 'Next Page';
+        nextPageButton.addEventListener('click', () => {
+            this.goToNextPage();
+        });
+
+        const pageNumberDisplay = document.createElement('span');
+        pageNumberDisplay.textContent = `${this.currentPage} / ${this.totalPages}`;
+        this.pageNumberDisplay = pageNumberDisplay;
+
+        controls.appendChild(zoomOutButton);
+        controls.appendChild(zoomInButton);
+        controls.appendChild(prevPageButton);
+        controls.appendChild(nextPageButton);
+        controls.appendChild(pageNumberDisplay);
+
+        container.appendChild(controls);
+
+        const canvasContainer = document.createElement('div');
+        canvasContainer.className = 'pdf-canvas-container';
+        container.appendChild(canvasContainer);
+
+        this.canvas = document.createElement('canvas');
+        canvasContainer.appendChild(this.canvas);
+    }
+
+    async onAfterAttach(msg: Message): Promise<void> {
+        super.onAfterAttach(msg);
+        await this.loadPDF();
+    }
+
+    async loadPDF(): Promise<void> {
+        const file = await this.fileHandle.getFile();
+        const arrayBuffer = await file.arrayBuffer();
+        this.pdfDoc = await getDocument({ data: arrayBuffer }).promise;
+        this.totalPages = this.pdfDoc.numPages;
+        this.updatePageNumberDisplay();
+        await this.renderPage(this.currentPage);
+    }
+
+    async renderPage(num: number): Promise<void> {
+        if (!this.pdfDoc) return;
+        const page = await this.pdfDoc.getPage(num);
+        const viewport = page.getViewport({ scale: this.scale });
+        const context = this.canvas.getContext('2d');
+        if (!context) return;
+        this.canvas.height = viewport.height;
+        this.canvas.width = viewport.width;
+        const renderContext = {
+            canvasContext: context,
+            viewport: viewport,
+        };
+        await page.render(renderContext).promise;
+    }
+
+    zoomIn(): void {
+        this.scale += 0.1;
+        this.renderPage(this.currentPage);
+    }
+
+    zoomOut(): void {
+        if (this.scale > 0.2) {
+            this.scale -= 0.1;
+            this.renderPage(this.currentPage);
+        }
+    }
+
+    goToPreviousPage(): void {
+        if (this.currentPage > 1) {
+            this.currentPage -= 1;
+            this.updatePageNumberDisplay();
+            this.renderPage(this.currentPage);
+        }
+    }
+
+    goToNextPage(): void {
+        if (this.currentPage < this.totalPages) {
+            this.currentPage += 1;
+            this.updatePageNumberDisplay();
+            this.renderPage(this.currentPage);
+        }
+    }
+
+    updatePageNumberDisplay(): void {
+        if (this.pageNumberDisplay) {
+            this.pageNumberDisplay.textContent = `${this.currentPage} / ${this.totalPages}`;
+        }
+    }
+}
+
 
 class ContentWidget extends Widget {
     static menuFocus: ContentWidget | null;
     static currentWidget: ContentWidget | null = null;
     static previewWidget: ContentWidget | null = null;
-
     private editor: monaco.editor.IStandaloneCodeEditor | null = null;
     private initialContent: string;
     private fileHandle: FileSystemFileHandle | null = null;
@@ -160,24 +284,19 @@ class ContentWidget extends Widget {
         super();
         this.setFlag(Widget.Flag.DisallowLayout);
         this.addClass('content');
-
         this.title.label = name;
         this.title.closable = true;
         this.title.caption = `Editing: ${name}`;
         this.title.iconClass = 'fa fa-file';
-
         this.initialContent = initialContent;
         this.fileHandle = fileHandle;
         this.isPreview = isPreview;
-
         this.node.style.width = '100%';
         this.node.style.height = '100%';
-
         this.contextMenuHandler = (event: MouseEvent) => {
             ContentWidget.menuFocus = this;
         };
         this.node.addEventListener('contextmenu', this.contextMenuHandler);
-
         if (this.isPreview) {
             this.title.className += ' preview-tab';
         }
@@ -187,18 +306,15 @@ class ContentWidget extends Widget {
         super.onAfterAttach(msg);
         let model: monaco.editor.ITextModel | null = null;
         const uri = monaco.Uri.parse('file:///' + (this.fileHandle ? this.fileHandle.name : this.title.label));
-
         if (monaco.editor.getModel(uri)) {
             model = monaco.editor.getModel(uri)!;
         } else {
             model = monaco.editor.createModel(this.initialContent, undefined, uri);
         }
-
         this.editor = monaco.editor.create(this.node, {
             model: model,
             automaticLayout: true,
         });
-
         if (this.isPreview && this.editor) {
             this.editor.onDidChangeModelContent(() => {
                 this.convertToPermanent();
@@ -301,13 +417,10 @@ class DirectoryViewerWidget extends Widget {
     constructor() {
         super();
         this.addClass('directory-viewer-widget');
-
         this.container = document.createElement('div');
         this.container.className = 'directory-viewer-container';
         this.node.appendChild(this.container);
-
         this.directoryHandle = null;
-
         const openDirButton = document.createElement('button');
         openDirButton.textContent = 'Open Directory';
         openDirButton.classList.add('lm-Button');
@@ -323,7 +436,6 @@ class DirectoryViewerWidget extends Widget {
 
     async setDirectoryHandle(handle: FileSystemDirectoryHandle) {
         this.directoryHandle = handle;
-
         this.directoryTree = {
             name: handle.name,
             kind: 'directory',
@@ -340,27 +452,20 @@ class DirectoryViewerWidget extends Widget {
     async createDomNode(node: DirectoryNode, path: string = ''): Promise<HTMLUListElement> {
         const ul = document.createElement('ul');
         ul.className = 'directory-tree';
-
         const li = document.createElement('li');
         li.className = 'directory-item';
         const currentPath = path ? `${path}/${node.name}` : node.name;
         li.setAttribute('data-path', currentPath);
-
         const icon = document.createElement('span');
         icon.className = 'directory-icon';
-
         const nameSpan = document.createElement('span');
         nameSpan.textContent = node.name;
-
         li.appendChild(icon);
         li.appendChild(nameSpan);
-
         ul.appendChild(li);
-
         if (node.kind === 'directory') {
             const childUl = document.createElement('ul');
             childUl.className = 'nested';
-
             if (this.expandedPaths.has(currentPath)) {
                 li.classList.add('expanded');
                 icon.classList.add('fa', 'fa-folder-open');
@@ -368,7 +473,6 @@ class DirectoryViewerWidget extends Widget {
                 li.classList.add('collapsed');
                 icon.classList.add('fa', 'fa-folder');
             }
-
             li.addEventListener('click', async (event) => {
                 event.stopPropagation();
                 if (li.classList.contains('collapsed')) {
@@ -377,7 +481,6 @@ class DirectoryViewerWidget extends Widget {
                     icon.classList.remove('fa-folder');
                     icon.classList.add('fa-folder-open');
                     this.expandedPaths.add(currentPath);
-
                     if (!node.loaded) {
                         node.loaded = true;
                         node.children = new Map<string, DirectoryNode>();
@@ -389,7 +492,6 @@ class DirectoryViewerWidget extends Widget {
                                 loaded: false,
                             };
                             node.children.set(name, childNode);
-
                             const childLi = await this.createDomNode(childNode, currentPath);
                             childUl.appendChild(childLi);
                         }
@@ -402,7 +504,6 @@ class DirectoryViewerWidget extends Widget {
                     this.expandedPaths.delete(currentPath);
                 }
             });
-
             li.appendChild(childUl);
         } else {
             icon.classList.add('fa', 'fa-file');
@@ -414,7 +515,6 @@ class DirectoryViewerWidget extends Widget {
                 }
                 li.classList.add('file-selected');
                 this.selectedItem = li;
-
                 if (clickTimer !== null) {
                     clearTimeout(clickTimer);
                     clickTimer = null;
@@ -427,23 +527,19 @@ class DirectoryViewerWidget extends Widget {
                 }
             });
         }
-
         return ul;
     }
 }
 
 function main(): void {
     let directoryViewer = new DirectoryViewerWidget();
-
     let menuBar = new MenuBar();
     menuBar.addMenu(createFileMenu());
     menuBar.addMenu(createEditMenu());
     menuBar.addMenu(createViewMenu());
     menuBar.id = 'menuBar';
-
     let themeToggleButton = createThemeToggleButton();
     menuBar.node.appendChild(themeToggleButton);
-
     let palette = new CommandPalette({ commands });
     palette.id = 'palette';
 
@@ -848,37 +944,43 @@ This is the landing page. Use the directory viewer to open files.`;
 
     directoryViewer.fileOpened.connect(async (sender, { path, handle, preview }) => {
         try {
-            const uri = monaco.Uri.parse('file:///' + handle.name);
-            let model = monaco.editor.getModel(uri);
-            if (!model) {
-                const file = await handle.getFile();
-                const content = await file.text();
-                model = monaco.editor.createModel(content, undefined, uri);
-            }
-
-            if (preview) {
-                if (ContentWidget.previewWidget) {
-                    if (ContentWidget.previewWidget.getFileHandle() === handle) {
-                        dock.activateWidget(ContentWidget.previewWidget);
-                        return;
-                    }
-                    ContentWidget.previewWidget.close();
-                }
-                let contentWidget = new ContentWidget(handle.name, '', handle, true);
-                ContentWidget.previewWidget = contentWidget;
-                dock.addWidget(contentWidget);
-                dock.activateWidget(contentWidget);
+            const fileExtension = handle.name.split('.').pop()?.toLowerCase();
+            if (fileExtension === 'pdf') {
+                let pdfWidget = new PDFViewerWidget(handle);
+                dock.addWidget(pdfWidget);
+                dock.activateWidget(pdfWidget);
             } else {
-                let existingWidget = findWidgetByFileHandle(handle);
-                if (existingWidget) {
-                    dock.activateWidget(existingWidget);
-                } else if (ContentWidget.previewWidget && ContentWidget.previewWidget.getFileHandle() === handle) {
-                    ContentWidget.previewWidget.convertToPermanent();
-                    ContentWidget.previewWidget = null;
-                } else {
-                    let contentWidget = new ContentWidget(handle.name, '', handle);
+                const uri = monaco.Uri.parse('file:///' + handle.name);
+                let model = monaco.editor.getModel(uri);
+                if (!model) {
+                    const file = await handle.getFile();
+                    const content = await file.text();
+                    model = monaco.editor.createModel(content, undefined, uri);
+                }
+                if (preview) {
+                    if (ContentWidget.previewWidget) {
+                        if (ContentWidget.previewWidget.getFileHandle() === handle) {
+                            dock.activateWidget(ContentWidget.previewWidget);
+                            return;
+                        }
+                        ContentWidget.previewWidget.close();
+                    }
+                    let contentWidget = new ContentWidget(handle.name, '', handle, true);
+                    ContentWidget.previewWidget = contentWidget;
                     dock.addWidget(contentWidget);
                     dock.activateWidget(contentWidget);
+                } else {
+                    let existingWidget = findWidgetByFileHandle(handle);
+                    if (existingWidget) {
+                        dock.activateWidget(existingWidget);
+                    } else if (ContentWidget.previewWidget && ContentWidget.previewWidget.getFileHandle() === handle) {
+                        ContentWidget.previewWidget.convertToPermanent();
+                        ContentWidget.previewWidget = null;
+                    } else {
+                        let contentWidget = new ContentWidget(handle.name, '', handle);
+                        dock.addWidget(contentWidget);
+                        dock.activateWidget(contentWidget);
+                    }
                 }
             }
         } catch (error) {
