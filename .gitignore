@@ -40,3 +40,6 @@ src/bind
 
 # Miscellaneous
 *.swp
+
+# Node-localstorage
+.node-localstorage

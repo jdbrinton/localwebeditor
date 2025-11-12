@@ -1,5 +1,5 @@
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+import { GlobalWorkerOptions } from 'pdfjs-dist';
+GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 import { CommandRegistry } from '@lumino/commands';
 import { Message, MessageLoop } from '@lumino/messaging';

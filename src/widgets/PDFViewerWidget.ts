@@ -101,6 +101,7 @@ export class PDFViewerWidget extends Widget {
         const renderContext = {
             canvasContext: context,
             viewport: viewport,
+            canvas: this.canvas,
         };
         await page.render(renderContext).promise;
     }

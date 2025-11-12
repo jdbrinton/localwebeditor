@@ -1,395 +1,435 @@
-@import '@lumino/widgets/style/index.css';
-@import '@lumino/default-theme/style/index.css';
+@import "@lumino/widgets/style/index.css";
+@import "@lumino/default-theme/style/index.css";
 
 body {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background-color: var(--background-color);
-    color: var(--text-color);
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 body[data-theme="light"] {
-    --background-color: #ffffff;
-    --text-color: #000000;
-    --primary-color: #007aff;
-    --hover-color: #f0f0f0;
-    --border-color: #ccc;
-    --menu-active-bg: #007aff;
-    --menu-active-text: #ffffff;
-    --tab-active-bg: #e0e0e0;
-    --tab-active-text: #000000;
+  --background-color: #ffffff;
+  --text-color: #000000;
+  --primary-color: #007aff;
+  --hover-color: #f0f0f0;
+  --border-color: #ccc;
+  --menu-active-bg: #007aff;
+  --menu-active-text: #ffffff;
+  --tab-active-bg: #e0e0e0;
+  --tab-active-text: #000000;
 }
 
 body[data-theme="dark"] {
-    --background-color: #1e1e1e;
-    --text-color: #d4d4d4;
-    --primary-color: #0a84ff;
-    --hover-color: #2a2a2a;
-    --border-color: #3c3c3c;
-    --menu-active-bg: #0a84ff;
-    --menu-active-text: #ffffff;
-    --tab-active-bg: #2d2d2d;
-    --tab-active-text: #ffffff;
+  --background-color: #1e1e1e;
+  --text-color: #d4d4d4;
+  --primary-color: #0a84ff;
+  --hover-color: #2a2a2a;
+  --border-color: #3c3c3c;
+  --menu-active-bg: #0a84ff;
+  --menu-active-text: #ffffff;
+  --tab-active-bg: #2d2d2d;
+  --tab-active-text: #ffffff;
 }
 
 body[data-theme="high-contrast"] {
-    --background-color: #000000;
-    --text-color: #ffffff;
-    --primary-color: #ffff00;
-    --hover-color: #1a1a1a;
-    --border-color: #ffffff;
-    --menu-active-bg: #ffff00;
-    --menu-active-text: #000000;
-    --tab-active-bg: #ffffff;
-    --tab-active-text: #000000;
+  --background-color: #000000;
+  --text-color: #ffffff;
+  --primary-color: #ffff00;
+  --hover-color: #1a1a1a;
+  --border-color: #ffffff;
+  --menu-active-bg: #ffff00;
+  --menu-active-text: #000000;
+  --tab-active-bg: #ffffff;
+  --tab-active-text: #000000;
 }
 
 #menuBar {
-    flex: 0 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--background-color);
-    border-bottom: 1px solid var(--border-color);
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 #menuBar .lm-MenuBar-item {
-    color: var(--text-color);
+  color: var(--text-color);
 }
 
 #menuBar .lm-MenuBar-item.lm-mod-active,
 #menuBar .lm-MenuBar-item:active,
 #menuBar .lm-MenuBar-item:hover {
-    background-color: var(--menu-active-bg);
-    color: var(--menu-active-text);
+  background-color: var(--menu-active-bg);
+  color: var(--menu-active-text);
 }
 
 #themeToggleButton {
-    margin-right: 10px;
-    padding: 4px;
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 16px;
-    color: var(--text-color);
+  margin-right: 10px;
+  padding: 4px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-color);
 }
 
 #themeToggleButton.light-theme-icon::before {
-    content: "\f185";
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
+  content: "\f185";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
 }
 
 #themeToggleButton.dark-theme-icon::before {
-    content: "\f186";
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
+  content: "\f186";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
 }
 
 #themeToggleButton.high-contrast-theme-icon::before {
-    content: "\f0eb";
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
+  content: "\f0eb";
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
 }
 
 #main {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: row;
-    overflow: hidden;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
 }
 
 #leftPanel {
-    width: 300px;
-    min-width: 200px;
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background-color: var(--background-color);
+  width: 300px;
+  min-width: 200px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--background-color);
 }
 
 /* Adjust the CommandPalette styles */
 #leftPanel > .lm-CommandPalette {
-    /* Remove height: 100%; */
-    flex: 0 0 auto;
-    min-height: 250px;
-    overflow: auto;
-    z-index: 1;
-    border: 0px;
+  /* Remove height: 100%; */
+  flex: 0 0 auto;
+  min-height: 250px;
+  overflow: auto;
+  z-index: 1;
+  border: 0px;
 }
 
 /* Ensure the directory-viewer-widget fills the remaining space */
 #leftPanel > .directory-viewer-widget {
-    flex: 1 1 auto;
-    overflow: auto;
-    z-index: 0;
-    border-top: 1px solid var(--border-color);
+  flex: 1 1 auto;
+  overflow: auto;
+  z-index: 0;
+  border-top: 1px solid var(--border-color);
 }
 
 #palette {
-    min-width: 300px;
-    border-right: 1px solid var(--border-color);
-    background-color: var(--background-color);
-    color: var(--text-color);
+  min-width: 300px;
+  border-right: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 #dock {
-    padding: 4px;
-    flex: 1 1 auto;
-    overflow: auto;
-    background-color: var(--background-color);
-    color: var(--text-color);
+  padding: 4px;
+  flex: 1 1 auto;
+  overflow: auto;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 .content {
-    min-width: 50px;
-    min-height: 50px;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--border-color);
-    border-top: none;
-    background: var(--background-color);
+  min-width: 50px;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  background: var(--background-color);
 }
 
-.content>div {
-    flex: 1 1 auto;
-    border: 1px solid var(--border-color);
-    overflow: auto;
+.content > div {
+  flex: 1 1 auto;
+  border: 1px solid var(--border-color);
+  overflow: auto;
 }
 
 .content input {
-    margin: 8px;
+  margin: 8px;
 }
 
 .directory-viewer-widget {
-    padding: 10px;
-    overflow: auto;
-    background-color: var(--background-color);
-    font: 13px Helvetica, Arial, sans-serif;
-    color: var(--text-color);
+  padding: 10px;
+  overflow: auto;
+  background-color: var(--background-color);
+  font: 13px Helvetica, Arial, sans-serif;
+  color: var(--text-color);
 }
 
 /* Add the new styles below */
 
 .directory-viewer-container {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    overflow: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 .directory-tree {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
 }
 
 .directory-tree ul {
-    list-style-type: none;
-    margin: 0;
-    padding-left: 20px;
+  list-style-type: none;
+  margin: 0;
+  padding-left: 20px;
 }
 
 .directory-item {
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-    padding: 4px 0;
-    color: var(--text-color);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding: 4px 0;
+  color: var(--text-color);
 }
 
 .directory-item:hover {
-    background-color: var(--hover-color);
+  background-color: var(--hover-color);
 }
 
 .directory-item .directory-icon {
-    margin-right: 5px;
+  margin-right: 5px;
 }
 
-.directory-item.collapsed>ul {
-    display: none;
+.directory-item.collapsed > ul {
+  display: none;
 }
 
 .file-selected {
-    background-color: var(--primary-color);
+  background-color: var(--primary-color);
 }
 
 .fa-folder,
 .fa-folder-open,
 .fa-file {
-    width: 16px;
-    display: inline-block;
-    text-align: center;
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
+  width: 16px;
+  display: inline-block;
+  text-align: center;
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
 }
 
 .fa-folder::before {
-    content: "\f07b";
+  content: "\f07b";
 }
 
 .fa-folder-open::before {
-    content: "\f07c";
+  content: "\f07c";
 }
 
 .fa-file::before {
-    content: "\f15b";
+  content: "\f15b";
 }
 
 .status-bar {
-    background-color: var(--background-color);
-    border-top: 1px solid var(--border-color);
-    padding: 4px;
-    font-size: 12px;
-    min-height: 24px;
-    box-sizing: border-box;
-    color: var(--text-color);
+  background-color: var(--background-color);
+  border-top: 1px solid var(--border-color);
+  padding: 4px;
+  font-size: 12px;
+  min-height: 24px;
+  box-sizing: border-box;
+  color: var(--text-color);
 }
 
 .content {
-    position: relative;
-    width: 100%;
-    height: 100%;
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .content .monaco-editor {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    border: 0px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border: 0px;
 }
 
 .lm-TabBar-tab.preview-tab .lm-TabBar-tabLabel {
-    font-style: italic;
+  font-style: italic;
 }
 
 .lm-TabBar-tab {
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-    background-color: var(--background-color);
-    color: var(--text-color);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 .lm-TabBar-tab.lm-mod-current {
-    background-color: var(--tab-active-bg);
-    color: var(--tab-active-text);
+  background-color: var(--tab-active-bg);
+  color: var(--tab-active-text);
 }
 
 .lm-TabBar-tab:hover {
-    background-color: var(--hover-color);
-    color: var(--text-color);
+  background-color: var(--hover-color);
+  color: var(--text-color);
 }
 
 .lm-TabBar-tabIcon {
-    display: inline-block;
-    vertical-align: middle;
-    font-size: 14px;
-    line-height: normal;
-    margin-right: 4px;
+  display: inline-block;
+  vertical-align: middle;
+  font-size: 14px;
+  line-height: normal;
+  margin-right: 4px;
 }
 
 .lm-TabBar-tabLabel {
-    vertical-align: middle;
-    line-height: normal;
+  vertical-align: middle;
+  line-height: normal;
 }
 
 .lm-TabBar-tabIcon.fa {
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
 }
 
 body[data-theme="light"] .lm-MenuBar,
 body[data-theme="dark"] .lm-MenuBar,
 body[data-theme="high-contrast"] .lm-MenuBar {
-    background-color: var(--background-color);
-    color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 body[data-theme="light"] .lm-MenuBar-item,
 body[data-theme="dark"] .lm-MenuBar-item,
 body[data-theme="high-contrast"] .lm-MenuBar-item {
-    color: var(--text-color);
+  color: var(--text-color);
 }
 
 body[data-theme="light"] .lm-MenuBar-item.lm-mod-active,
 body[data-theme="dark"] .lm-MenuBar-item.lm-mod-active,
 body[data-theme="high-contrast"] .lm-MenuBar-item.lm-mod-active {
-    background-color: var(--menu-active-bg);
-    color: var(--menu-active-text);
+  background-color: var(--menu-active-bg);
+  color: var(--menu-active-text);
 }
 
 body[data-theme="light"] .lm-TabBar-tab,
 body[data-theme="dark"] .lm-TabBar-tab,
 body[data-theme="high-contrast"] .lm-TabBar-tab {
-    background-color: var(--background-color);
-    color: var(--text-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 body[data-theme="light"] .lm-TabBar-tab.lm-mod-current,
 body[data-theme="dark"] .lm-TabBar-tab.lm-mod-current,
 body[data-theme="high-contrast"] .lm-TabBar-tab.lm-mod-current {
-    background-color: var(--tab-active-bg);
-    color: var(--tab-active-text);
+  background-color: var(--tab-active-bg);
+  color: var(--tab-active-text);
 }
 
 body[data-theme="light"] .lm-TabBar-tab:hover,
 body[data-theme="dark"] .lm-TabBar-tab:hover,
 body[data-theme="high-contrast"] .lm-TabBar-tab:hover {
-    background-color: var(--hover-color);
-    color: var(--text-color);
+  background-color: var(--hover-color);
+  color: var(--text-color);
 }
 
 /* Styles for PDFViewerWidget */
 .pdf-viewer-widget {
-    min-width: 50px;
-    min-height: 50px;
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--border-color);
-    border-top: none;
-    background: var(--background-color);
+  min-width: 50px;
+  min-height: 50px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-color);
+  border-top: none;
+  background: var(--background-color);
 }
 
 .pdf-viewer-container {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    /* Ensure container doesn't overflow its parent */
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Ensure container doesn't overflow its parent */
 }
 
 .pdf-viewer-controls {
-    flex: 0 0 auto;
-    padding: 4px;
-    background-color: var(--background-color);
-    border-bottom: 1px solid var(--border-color);
+  flex: 0 0 auto;
+  padding: 4px;
+  background-color: var(--background-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .pdf-viewer-controls button {
-    margin-right: 4px;
+  margin-right: 4px;
 }
 
 .pdf-canvas-container {
-    flex: 1 1 auto;
-    overflow: auto;
-    /* Enable scrolling when content overflows */
+  flex: 1 1 auto;
+  overflow: auto;
+  /* Enable scrolling when content overflows */
 }
 
 .pdf-canvas-container canvas {
-    display: block;
-    margin: 0 auto;
-    /* Center the canvas horizontally */
+  display: block;
+  margin: 0 auto;
+  /* Center the canvas horizontally */
+}
+
+.lm-Menu,
+.lm-MenuBar-item,
+.lm-Menu .lm-Menu-itemLabel,
+.lm-Menu .lm-Menu-itemShortcut,
+.lm-Menu .lm-Menu-itemIcon,
+.lm-TabBar-tabLabel,
+.lm-TabBar-tabIcon,
+.lm-TabBar-tabCloseIcon,
+.monaco-editor,
+.monaco-editor .view-lines,
+.monaco-editor .mtk0,
+.monaco-editor .mtk1,
+.monaco-editor .mtk2,
+.monaco-editor .mtk3,
+.monaco-editor .mtk4,
+.monaco-editor .mtk5,
+.monaco-editor .mtk6,
+.monaco-editor .mtk7,
+.monaco-editor .mtk8,
+.monaco-editor .mtk9 {
+  /*
+    Windows browsers render opaque text layers with ClearType, which performs
+    sub-pixel (RGB) anti-aliasing. It manipulates each color subpixel to boost
+    horizontal resolution, resulting in sharper glyph edges but visible color
+    fringing under magnification.
+
+    When the compositor detects any non-opaque or transformed layer (opacity < 1,
+    CSS transform, filter, etc.), it can no longer assume a fixed LCD subpixel
+    layout. The text then moves off the “LCD text path” to the “non-LCD path,”
+    where rendering falls back to grayscale anti-aliasing. Grayscale AA averages
+    brightness uniformly across RGB, removing colored fringes and matching how
+    native Windows menus, tab labels, and captions are drawn.
+
+    Applying `opacity: 0.999` forces that GPU-composited path on these UI elements,
+    disabling ClearType and ensuring a clean grayscale look for menu labels,
+    shortcuts, icons, and Lumino tab labels—consistent with native Windows UI.
+  */
+  opacity: 0.999;
 }
